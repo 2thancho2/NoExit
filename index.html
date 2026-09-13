@@ -1,0 +1,3631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>No Exit</title>
+
+<style>
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+html,
+body {
+
+    margin: 0;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #000;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+}
+
+#game {
+
+    position: fixed;
+
+    inset: 0;
+}
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+#hud {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    color: white;
+}
+
+
+#title {
+
+    position: absolute;
+
+    top: 20px;
+    left: 20px;
+
+    font-size: 22px;
+
+    font-weight: bold;
+
+    letter-spacing: 5px;
+
+    text-shadow:
+        0 2px 10px black;
+}
+
+
+#status {
+
+    position: absolute;
+
+    top: 55px;
+    left: 20px;
+
+    font-size: 13px;
+
+    color: #aaa;
+}
+
+
+#statusText {
+
+    transition: .2s;
+}
+
+
+#objective {
+
+    position: absolute;
+
+    top: 20px;
+    right: 20px;
+
+    text-align: right;
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+
+#danger {
+
+    position: absolute;
+
+    left: 50%;
+    bottom: 80px;
+
+    transform:
+        translateX(-50%);
+
+    color: #ff3333;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    opacity: 0;
+
+    transition:
+        opacity .2s;
+
+    text-shadow:
+        0 0 10px red,
+        0 0 25px red;
+}
+
+
+#crosshair {
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 14px;
+    height: 14px;
+
+    transform:
+        translate(
+            -50%,
+            -50%
+        );
+}
+
+
+#crosshair::before,
+#crosshair::after {
+
+    content: "";
+
+    position: absolute;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .8
+        );
+}
+
+
+#crosshair::before {
+
+    width: 14px;
+    height: 2px;
+
+    top: 6px;
+    left: 0;
+}
+
+
+#crosshair::after {
+
+    width: 2px;
+    height: 14px;
+
+    top: 0;
+    left: 6px;
+}
+
+
+#timer {
+
+    position: absolute;
+
+    bottom: 20px;
+    left: 20px;
+
+    font-size: 13px;
+
+    color: #999;
+}
+
+
+/* =========================================================
+   VIGNETTE
+========================================================= */
+
+#vignette {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 5;
+
+    pointer-events: none;
+
+    background:
+
+        radial-gradient(
+            circle,
+            transparent 50%,
+            rgba(
+                0,
+                0,
+                0,
+                .45
+            ) 100%
+        );
+}
+
+
+/* =========================================================
+   SCREEN
+========================================================= */
+
+#startScreen,
+#gameOver,
+#winScreen {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 30;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(
+            0,
+            0,
+            0,
+            .94
+        );
+
+    color: white;
+
+    text-align: center;
+}
+
+
+#gameOver,
+#winScreen {
+
+    display: none;
+}
+
+
+.panel {
+
+    width:
+        min(
+            620px,
+            90vw
+        );
+
+    padding: 42px;
+
+    background:
+        rgba(
+            10,
+            10,
+            12,
+            .97
+        );
+
+    border:
+        1px solid #444;
+
+    box-shadow:
+        0 0 80px
+        rgba(
+            0,
+            0,
+            0,
+            .8
+        );
+}
+
+
+.panel h1 {
+
+    margin:
+        0 0 20px;
+
+    font-size: 48px;
+
+    letter-spacing: 8px;
+}
+
+
+.panel p {
+
+    color: #aaa;
+
+    line-height: 1.8;
+}
+
+
+button {
+
+    margin-top: 20px;
+
+    padding:
+        14px 32px;
+
+    background:
+        transparent;
+
+    color: white;
+
+    border:
+        1px solid white;
+
+    cursor: pointer;
+
+    font-size: 15px;
+
+    transition:
+        .2s;
+}
+
+
+button:hover {
+
+    background: white;
+
+    color: black;
+}
+
+
+#gameOver h1 {
+
+    color: #ff3333;
+}
+
+
+#winScreen h1 {
+
+    color: #ffd400;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<!-- =======================================================
+     GAME
+======================================================= -->
+
+<div id="game"></div>
+
+<div id="vignette"></div>
+
+
+<!-- =======================================================
+     HUD
+======================================================= -->
+
+<div id="hud">
+
+    <div id="title">
+        No exit
+    </div>
+
+
+    <div id="status">
+
+        STATUS:
+
+        <span id="statusText">
+            SEARCHING
+        </span>
+
+    </div>
+
+
+    <div id="objective">
+
+        OBJECTIVE
+
+        <br>
+
+        <span
+            style="
+                color:#ffd400;
+                font-weight:bold;
+            "
+        >
+            ● FIND THE EXIT
+        </span>
+
+    </div>
+
+
+    <div id="danger">
+
+        ⚠ YOU HAVE BEEN SPOTTED
+
+    </div>
+
+
+    <div id="crosshair"></div>
+
+
+    <div id="timer">
+
+        TIME:
+
+        <span id="time">
+            0
+        </span>
+
+        s
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     START
+======================================================= -->
+
+<div id="startScreen">
+
+    <div class="panel">
+
+        <h1>
+            No Exit
+        </h1>
+
+
+        <p>
+
+            당신은 어두운 미로에 갇혔다.
+
+            <br>
+
+            미로에는 당신을 찾는
+            유령들이 돌아다니고 있다.
+
+        </p>
+
+
+        <p>
+
+            <b>W A S D</b>
+            — 이동
+
+            <br>
+
+            <b>마우스</b>
+            — 시점
+
+            <br>
+
+            <b>ESC</b>
+            — 마우스 잠금 해제
+
+            <br>
+
+            <b>R</b>
+            — 재시작
+
+        </p>
+
+
+        <p>
+
+            유령에게 들키지 않고
+
+            <br>
+
+            <span
+                style="
+                    color:#ffd400;
+                    font-weight:bold;
+                "
+            >
+                EXIT
+            </span>
+
+            를 찾아 탈출하세요.
+
+        </p>
+
+
+        <button id="startButton">
+
+            ENTER THE MAZE
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     GAME OVER
+======================================================= -->
+
+<div id="gameOver">
+
+    <div class="panel">
+
+        <h1>
+            CAUGHT
+        </h1>
+
+
+        <p>
+            유령에게 잡혔습니다.
+        </p>
+
+
+        <button
+            onclick="restartGame()"
+        >
+
+            TRY AGAIN
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     WIN
+======================================================= -->
+
+<div id="winScreen">
+
+    <div class="panel">
+
+        <h1>
+            ESCAPED
+        </h1>
+
+
+        <p>
+            미로에서 탈출했습니다.
+        </p>
+
+
+        <p>
+
+            탈출 시간:
+
+            <b id="finalTime">
+                0
+            </b>
+
+            초
+
+        </p>
+
+
+        <button
+            onclick="restartGame()"
+        >
+
+            PLAY AGAIN
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     THREE.JS
+======================================================= -->
+
+<script type="importmap">
+
+{
+    "imports": {
+
+        "three":
+        "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+
+    }
+}
+
+</script>
+
+
+<script type="module">
+
+import * as THREE
+from "three";
+
+
+/* =========================================================
+   SCENE
+========================================================= */
+
+const scene =
+    new THREE.Scene();
+
+
+scene.background =
+    new THREE.Color(
+        0x080808
+    );
+
+
+scene.fog =
+    new THREE.FogExp2(
+
+        0x080808,
+
+        0.008
+
+    );
+
+
+/* =========================================================
+   CAMERA
+========================================================= */
+
+const camera =
+    new THREE.PerspectiveCamera(
+
+        75,
+
+        window.innerWidth /
+        window.innerHeight,
+
+        .1,
+
+        200
+
+    );
+
+
+/* =========================================================
+   RENDERER
+========================================================= */
+
+const renderer =
+    new THREE.WebGLRenderer({
+
+        antialias: true
+
+    });
+
+
+renderer.setSize(
+
+    window.innerWidth,
+
+    window.innerHeight
+
+);
+
+
+renderer.setPixelRatio(
+
+    Math.min(
+        window.devicePixelRatio,
+        2
+    )
+
+);
+
+
+renderer.outputColorSpace =
+    THREE.SRGBColorSpace;
+
+
+renderer.shadowMap.enabled =
+    true;
+
+
+document
+    .getElementById(
+        "game"
+    )
+    .appendChild(
+        renderer.domElement
+    );
+
+
+/* =========================================================
+   LIGHT
+========================================================= */
+
+/*
+    손전등 없음.
+
+    환경광으로 플레이.
+*/
+
+const ambient =
+    new THREE.AmbientLight(
+
+        0xffffff,
+
+        1.65
+
+    );
+
+
+scene.add(
+    ambient
+);
+
+
+const hemisphere =
+    new THREE.HemisphereLight(
+
+        0x9999aa,
+
+        0x222222,
+
+        1.1
+
+    );
+
+
+scene.add(
+    hemisphere
+);
+
+
+/* =========================================================
+   MAZE
+========================================================= */
+
+const maze = [
+
+"#########################",
+"#P........#.............#",
+"#####.####.#.##########.#",
+"#.....#....#.#..........#",
+"#.###.#.####.#.########.#",
+"#...#.#......#..........#",
+"###.#.###############.#.#",
+"#...#.................#.#",
+"#.###################.#.#",
+"#.....................#.#",
+"#.#####################.#",
+"#.......................#",
+"#######################.#",
+"#.......................#",
+"#.#####################.#",
+"#.......................#",
+"#####################.###",
+"#.......................#",
+"#.#####################.#",
+"#.......................#",
+"#######################.#",
+"#.......................#",
+"#######################E#"
+
+];
+
+
+const TILE =
+    2;
+
+
+const mazeWidth =
+    maze[0].length;
+
+
+const mazeHeight =
+    maze.length;
+
+
+/* =========================================================
+   MATERIALS
+========================================================= */
+
+const wallMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color:
+            0x50505a,
+
+        roughness:
+            1,
+
+        metalness:
+            0
+
+    });
+
+
+const floorMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color:
+            0x202025,
+
+        roughness:
+            1,
+
+        metalness:
+            0
+
+    });
+
+
+const ceilingMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color:
+            0x101014,
+
+        roughness:
+            1
+
+    });
+
+
+/* =========================================================
+   COORDINATES
+========================================================= */
+
+function gridToWorld(
+    gx,
+    gz
+) {
+
+    return {
+
+        x:
+            (
+                gx -
+                (mazeWidth - 1) / 2
+            ) * TILE,
+
+        z:
+            (
+                gz -
+                (mazeHeight - 1) / 2
+            ) * TILE
+
+    };
+
+}
+
+
+function worldToGrid(
+    x,
+    z
+) {
+
+    return {
+
+        x:
+            Math.floor(
+
+                x / TILE +
+
+                (mazeWidth - 1) / 2 +
+
+                .5
+
+            ),
+
+        z:
+            Math.floor(
+
+                z / TILE +
+
+                (mazeHeight - 1) / 2 +
+
+                .5
+
+            )
+
+    };
+
+}
+
+
+/* =========================================================
+   GEOMETRY
+========================================================= */
+
+const wallGeometry =
+    new THREE.BoxGeometry(
+
+        TILE,
+        3,
+        TILE
+
+    );
+
+
+const floorGeometry =
+    new THREE.BoxGeometry(
+
+        TILE,
+        .2,
+        TILE
+
+    );
+
+
+const ceilingGeometry =
+    new THREE.BoxGeometry(
+
+        TILE,
+        .2,
+        TILE
+
+    );
+
+
+/* =========================================================
+   BUILD MAZE
+========================================================= */
+
+let playerStart =
+    null;
+
+
+let exitPosition =
+    null;
+
+
+for (
+    let z = 0;
+    z < mazeHeight;
+    z++
+) {
+
+    for (
+        let x = 0;
+        x < mazeWidth;
+        x++
+    ) {
+
+        const cell =
+            maze[z][x];
+
+
+        const position =
+            gridToWorld(
+                x,
+                z
+            );
+
+
+        /* FLOOR */
+
+        const floor =
+            new THREE.Mesh(
+
+                floorGeometry,
+
+                floorMaterial
+
+            );
+
+
+        floor.position.set(
+
+            position.x,
+
+            -1.6,
+
+            position.z
+
+        );
+
+
+        floor.receiveShadow =
+            true;
+
+
+        scene.add(
+            floor
+        );
+
+
+        /* CEILING */
+
+        const ceiling =
+            new THREE.Mesh(
+
+                ceilingGeometry,
+
+                ceilingMaterial
+
+            );
+
+
+        ceiling.position.set(
+
+            position.x,
+
+            1.6,
+
+            position.z
+
+        );
+
+
+        scene.add(
+            ceiling
+        );
+
+
+        /* WALL */
+
+        if (
+            cell === "#"
+        ) {
+
+            const wall =
+                new THREE.Mesh(
+
+                    wallGeometry,
+
+                    wallMaterial
+
+                );
+
+
+            wall.position.set(
+
+                position.x,
+
+                0,
+
+                position.z
+
+            );
+
+
+            wall.castShadow =
+                true;
+
+
+            wall.receiveShadow =
+                true;
+
+
+            scene.add(
+                wall
+            );
+
+        }
+
+
+        /* PLAYER */
+
+        if (
+            cell === "P"
+        ) {
+
+            playerStart =
+                position;
+
+        }
+
+
+        /* EXIT */
+
+        if (
+            cell === "E"
+        ) {
+
+            exitPosition =
+                position;
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+const player = {
+
+    x:
+        playerStart.x,
+
+    y:
+        1.0,
+
+    z:
+        playerStart.z,
+
+    yaw:
+        Math.PI,
+
+    pitch:
+        0,
+
+    speed:
+        4.5,
+
+    alive:
+        true
+
+};
+
+
+camera.position.set(
+
+    player.x,
+
+    player.y,
+
+    player.z
+
+);
+
+
+/* =========================================================
+   COLLISION
+========================================================= */
+
+function isWall(
+    x,
+    z
+) {
+
+    const grid =
+        worldToGrid(
+            x,
+            z
+        );
+
+
+    if (
+
+        grid.x < 0 ||
+        grid.x >= mazeWidth ||
+        grid.z < 0 ||
+        grid.z >= mazeHeight
+
+    ) {
+
+        return true;
+
+    }
+
+
+    return (
+        maze[
+            grid.z
+        ][
+            grid.x
+        ] === "#"
+    );
+
+}
+
+
+function canMove(
+    x,
+    z
+) {
+
+    const radius =
+        .3;
+
+
+    return (
+
+        !isWall(
+            x - radius,
+            z
+        )
+
+        &&
+
+        !isWall(
+            x + radius,
+            z
+        )
+
+        &&
+
+        !isWall(
+            x,
+            z - radius
+        )
+
+        &&
+
+        !isWall(
+            x,
+            z + radius
+        )
+
+    );
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+const keys = {};
+
+
+window.addEventListener(
+    "keydown",
+    event => {
+
+        keys[
+            event.code
+        ] = true;
+
+
+        if (
+            event.code ===
+            "KeyR"
+        ) {
+
+            restartGame();
+
+        }
+
+    }
+);
+
+
+window.addEventListener(
+    "keyup",
+    event => {
+
+        keys[
+            event.code
+        ] = false;
+
+    }
+);
+
+
+/* =========================================================
+   MOUSE
+========================================================= */
+
+let mouseLocked =
+    false;
+
+
+document.addEventListener(
+    "pointerlockchange",
+    () => {
+
+        mouseLocked =
+            document.pointerLockElement ===
+            renderer.domElement;
+
+    }
+);
+
+
+document.addEventListener(
+    "mousemove",
+    event => {
+
+        if (
+            !mouseLocked
+        ) return;
+
+
+        const sensitivity =
+            .002;
+
+
+        player.yaw -=
+            event.movementX *
+            sensitivity;
+
+
+        player.pitch -=
+            event.movementY *
+            sensitivity;
+
+
+        player.pitch =
+            THREE.MathUtils.clamp(
+
+                player.pitch,
+
+                -1.45,
+
+                1.45
+
+            );
+
+    }
+);
+
+
+/* =========================================================
+   CAMERA
+========================================================= */
+
+function updateCamera() {
+
+    camera.position.set(
+
+        player.x,
+        player.y,
+        player.z
+
+    );
+
+
+    camera.rotation.order =
+        "YXZ";
+
+
+    camera.rotation.y =
+        player.yaw;
+
+
+    camera.rotation.x =
+        player.pitch;
+
+}
+
+
+/* =========================================================
+   PLAYER MOVEMENT
+========================================================= */
+
+function updatePlayer(
+    dt
+) {
+
+    if (
+        !player.alive
+    ) return;
+
+
+    let forward =
+        0;
+
+
+    let right =
+        0;
+
+
+    if (
+        keys["KeyW"]
+    )
+        forward++;
+
+
+    if (
+        keys["KeyS"]
+    )
+        forward--;
+
+
+    if (
+        keys["KeyD"]
+    )
+        right++;
+
+
+    if (
+        keys["KeyA"]
+    )
+        right--;
+
+
+    if (
+        forward === 0 &&
+        right === 0
+    ) {
+
+        updateCamera();
+
+        return;
+
+    }
+
+
+    const length =
+        Math.sqrt(
+
+            forward *
+            forward +
+
+            right *
+            right
+
+        );
+
+
+    forward /=
+        length;
+
+
+    right /=
+        length;
+
+
+    const sin =
+        Math.sin(
+            player.yaw
+        );
+
+
+    const cos =
+        Math.cos(
+            player.yaw
+        );
+
+
+    const moveX =
+
+        (
+            -sin * forward +
+            cos * right
+        )
+
+        *
+
+        player.speed
+
+        *
+
+        dt;
+
+
+    const moveZ =
+
+        (
+            -cos * forward -
+            sin * right
+        )
+
+        *
+
+        player.speed
+
+        *
+
+        dt;
+
+
+    const nextX =
+        player.x +
+        moveX;
+
+
+    const nextZ =
+        player.z +
+        moveZ;
+
+
+    if (
+        canMove(
+            nextX,
+            player.z
+        )
+    ) {
+
+        player.x =
+            nextX;
+
+    }
+
+
+    if (
+        canMove(
+            player.x,
+            nextZ
+        )
+    ) {
+
+        player.z =
+            nextZ;
+
+    }
+
+
+    updateCamera();
+
+}
+
+
+/* =========================================================
+   EXIT
+========================================================= */
+
+const exitMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color:
+            0xffd400,
+
+        emissive:
+            0xffaa00,
+
+        emissiveIntensity:
+            3
+
+    });
+
+
+const exit =
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+
+            1.4,
+            .05,
+            1.4
+
+        ),
+
+        exitMaterial
+
+    );
+
+
+exit.position.set(
+
+    exitPosition.x,
+
+    -1.48,
+
+    exitPosition.z
+
+);
+
+
+scene.add(
+    exit
+);
+
+
+const exitLight =
+    new THREE.PointLight(
+
+        0xffd400,
+
+        3,
+
+        7
+
+    );
+
+
+exitLight.position.set(
+
+    exitPosition.x,
+
+    .5,
+
+    exitPosition.z
+
+);
+
+
+scene.add(
+    exitLight
+);
+
+
+/* =========================================================
+   GHOSTS
+========================================================= */
+
+const ghosts = [];
+
+
+/*
+    RED
+    적극적인 추적
+*/
+
+const ghostData = [
+
+    {
+        color: 0xff2222,
+        type: "HUNTER",
+        speed: 1.65,
+        start: [12, 3]
+    },
+
+    /*
+        PINK
+        플레이어 앞쪽을 노림
+    */
+
+    {
+        color: 0xff66aa,
+        type: "AMBUSH",
+        speed: 1.45,
+        start: [20, 9]
+    },
+
+    /*
+        BLUE
+        플레이어 주변을 차단하려고 함
+    */
+
+    {
+        color: 0x2299ff,
+        type: "CUTTER",
+        speed: 1.35,
+        start: [3, 17]
+    }
+
+];
+
+
+/* =========================================================
+   CREATE GHOST
+========================================================= */
+
+function createGhost(
+    data
+) {
+
+    const group =
+        new THREE.Group();
+
+
+    /* BODY */
+
+    const bodyMaterial =
+        new THREE.MeshStandardMaterial({
+
+            color:
+                data.color,
+
+            emissive:
+                data.color,
+
+            emissiveIntensity:
+                1.5
+
+        });
+
+
+    const body =
+        new THREE.Mesh(
+
+            new THREE.SphereGeometry(
+
+                .55,
+                20,
+                20
+
+            ),
+
+            bodyMaterial
+
+        );
+
+
+    body.scale.y =
+        1.15;
+
+
+    group.add(
+        body
+    );
+
+
+    /* EYES */
+
+    const eyeMaterial =
+        new THREE.MeshBasicMaterial({
+
+            color:
+                0xffffff
+
+        });
+
+
+    const pupilMaterial =
+        new THREE.MeshBasicMaterial({
+
+            color:
+                0x000000
+
+        });
+
+
+    for (
+        const side of [-1, 1]
+    ) {
+
+        const eye =
+            new THREE.Mesh(
+
+                new THREE.SphereGeometry(
+
+                    .12,
+                    10,
+                    10
+
+                ),
+
+                eyeMaterial
+
+            );
+
+
+        eye.position.set(
+
+            side * .2,
+            .15,
+            -.43
+
+        );
+
+
+        group.add(
+            eye
+        );
+
+
+        const pupil =
+            new THREE.Mesh(
+
+                new THREE.SphereGeometry(
+
+                    .055,
+                    8,
+                    8
+
+                ),
+
+                pupilMaterial
+
+            );
+
+
+        pupil.position.set(
+
+            side * .2,
+            .15,
+            -.53
+
+        );
+
+
+        group.add(
+            pupil
+        );
+
+    }
+
+
+    const position =
+        gridToWorld(
+
+            data.start[0],
+            data.start[1]
+
+        );
+
+
+    group.position.set(
+
+        position.x,
+        -.6,
+        position.z
+
+    );
+
+
+    scene.add(
+        group
+    );
+
+
+    const ghost = {
+
+        mesh:
+            group,
+
+        x:
+            position.x,
+
+        z:
+            position.z,
+
+        type:
+            data.type,
+
+        speed:
+            data.speed,
+
+        state:
+            "PATROL",
+
+        path:
+            [],
+
+        pathIndex:
+            0,
+
+        lastSeenX:
+            position.x,
+
+        lastSeenZ:
+            position.z,
+
+        memoryTimer:
+            0,
+
+        searchTimer:
+            0,
+
+        patrolTimer:
+            0,
+
+        searchTarget:
+            null,
+
+        searchTargetTimer:
+            0,
+
+        dirX:
+            0,
+
+        dirZ:
+            -1
+
+    };
+
+
+    ghosts.push(
+        ghost
+    );
+
+}
+
+
+for (
+    const data of ghostData
+) {
+
+    createGhost(
+        data
+    );
+
+}
+
+
+/* =========================================================
+   LINE OF SIGHT
+========================================================= */
+
+const VISION_RANGE =
+    9;
+
+
+const VISION_ANGLE =
+    Math.PI *
+    .7;
+
+
+function hasLineOfSight(
+
+    x1,
+    z1,
+    x2,
+    z2
+
+) {
+
+    const dx =
+        x2 - x1;
+
+
+    const dz =
+        z2 - z1;
+
+
+    const distance =
+        Math.sqrt(
+
+            dx * dx +
+            dz * dz
+
+        );
+
+
+    const steps =
+        Math.ceil(
+            distance / .2
+        );
+
+
+    for (
+        let i = 0;
+        i <= steps;
+        i++
+    ) {
+
+        const t =
+            i / steps;
+
+
+        const x =
+            x1 +
+            dx * t;
+
+
+        const z =
+            z1 +
+            dz * t;
+
+
+        if (
+            isWall(
+                x,
+                z
+            )
+        ) {
+
+            return false;
+
+        }
+
+    }
+
+
+    return true;
+
+}
+
+
+/* =========================================================
+   CAN SEE PLAYER
+========================================================= */
+
+function canGhostSeePlayer(
+    ghost
+) {
+
+    const dx =
+        player.x -
+        ghost.x;
+
+
+    const dz =
+        player.z -
+        ghost.z;
+
+
+    const distance =
+        Math.sqrt(
+
+            dx * dx +
+            dz * dz
+
+        );
+
+
+    if (
+        distance >
+        VISION_RANGE
+    ) {
+
+        return false;
+
+    }
+
+
+    const dirX =
+        ghost.dirX;
+
+
+    const dirZ =
+        ghost.dirZ;
+
+
+    const playerDirX =
+        dx /
+        distance;
+
+
+    const playerDirZ =
+        dz /
+        distance;
+
+
+    const dot =
+        dirX *
+        playerDirX +
+
+        dirZ *
+        playerDirZ;
+
+
+    const angle =
+        Math.acos(
+
+            THREE.MathUtils.clamp(
+                dot,
+                -1,
+                1
+            )
+
+        );
+
+
+    if (
+        angle >
+        VISION_ANGLE / 2
+    ) {
+
+        return false;
+
+    }
+
+
+    return hasLineOfSight(
+
+        ghost.x,
+        ghost.z,
+
+        player.x,
+        player.z
+
+    );
+
+}
+
+
+/* =========================================================
+   BFS PATHFINDING
+========================================================= */
+
+function findPath(
+
+    startX,
+    startZ,
+
+    targetX,
+    targetZ
+
+) {
+
+    const start =
+        worldToGrid(
+            startX,
+            startZ
+        );
+
+
+    const target =
+        worldToGrid(
+            targetX,
+            targetZ
+        );
+
+
+    const queue = [];
+
+
+    const visited =
+        new Set();
+
+
+    const parent =
+        new Map();
+
+
+    const startKey =
+        `${start.x},${start.z}`;
+
+
+    const targetKey =
+        `${target.x},${target.z}`;
+
+
+    queue.push(
+        start
+    );
+
+
+    visited.add(
+        startKey
+    );
+
+
+    const directions = [
+
+        { x: 1, z: 0 },
+        { x: -1, z: 0 },
+        { x: 0, z: 1 },
+        { x: 0, z: -1 }
+
+    ];
+
+
+    while (
+        queue.length > 0
+    ) {
+
+        const current =
+            queue.shift();
+
+
+        const currentKey =
+            `${current.x},${current.z}`;
+
+
+        if (
+            currentKey ===
+            targetKey
+        ) {
+
+            break;
+
+        }
+
+
+        for (
+            const dir of directions
+        ) {
+
+            const nx =
+                current.x +
+                dir.x;
+
+
+            const nz =
+                current.z +
+                dir.z;
+
+
+            if (
+
+                nx < 0 ||
+                nx >= mazeWidth ||
+                nz < 0 ||
+                nz >= mazeHeight
+
+            ) {
+
+                continue;
+
+            }
+
+
+            if (
+                maze[nz][nx] === "#"
+            ) {
+
+                continue;
+
+            }
+
+
+            const key =
+                `${nx},${nz}`;
+
+
+            if (
+                visited.has(key)
+            ) {
+
+                continue;
+
+            }
+
+
+            visited.add(
+                key
+            );
+
+
+            parent.set(
+                key,
+                current
+            );
+
+
+            queue.push({
+
+                x:
+                    nx,
+
+                z:
+                    nz
+
+            });
+
+        }
+
+    }
+
+
+    if (
+        !visited.has(
+            targetKey
+        )
+    ) {
+
+        return [];
+
+    }
+
+
+    const path = [];
+
+
+    let current =
+        target;
+
+
+    while (
+
+        current.x !== start.x ||
+        current.z !== start.z
+
+    ) {
+
+        path.push(
+            current
+        );
+
+
+        const key =
+            `${current.x},${current.z}`;
+
+
+        current =
+            parent.get(
+                key
+            );
+
+
+        if (
+            !current
+        ) {
+
+            return [];
+
+        }
+
+    }
+
+
+    path.reverse();
+
+
+    return path;
+
+}
+
+
+/* =========================================================
+   SET PATH
+========================================================= */
+
+function setGhostPath(
+
+    ghost,
+    targetX,
+    targetZ
+
+) {
+
+    ghost.path =
+        findPath(
+
+            ghost.x,
+            ghost.z,
+
+            targetX,
+            targetZ
+
+        );
+
+
+    ghost.pathIndex =
+        0;
+
+}
+
+
+/* =========================================================
+   GHOST MOVEMENT
+========================================================= */
+
+function moveGhost(
+
+    ghost,
+    targetX,
+    targetZ,
+    dt
+
+) {
+
+    const dx =
+        targetX -
+        ghost.x;
+
+
+    const dz =
+        targetZ -
+        ghost.z;
+
+
+    const distance =
+        Math.sqrt(
+
+            dx * dx +
+            dz * dz
+
+        );
+
+
+    if (
+        distance <
+        .08
+    ) {
+
+        return true;
+
+    }
+
+
+    const dirX =
+        dx /
+        distance;
+
+
+    const dirZ =
+        dz /
+        distance;
+
+
+    ghost.dirX =
+        dirX;
+
+
+    ghost.dirZ =
+        dirZ;
+
+
+    const speed =
+        ghost.speed *
+        dt;
+
+
+    const nextX =
+        ghost.x +
+        dirX *
+        speed;
+
+
+    const nextZ =
+        ghost.z +
+        dirZ *
+        speed;
+
+
+    if (
+        canMove(
+            nextX,
+            ghost.z
+        )
+    ) {
+
+        ghost.x =
+            nextX;
+
+    }
+
+
+    if (
+        canMove(
+            ghost.x,
+            nextZ
+        )
+    ) {
+
+        ghost.z =
+            nextZ;
+
+    }
+
+
+    ghost.mesh.position.x =
+        ghost.x;
+
+
+    ghost.mesh.position.z =
+        ghost.z;
+
+
+    return false;
+
+}
+
+
+/* =========================================================
+   PREDICT PLAYER POSITION
+========================================================= */
+
+function getPlayerPrediction(
+    amount
+) {
+
+    const directionX =
+        -Math.sin(
+            player.yaw
+        );
+
+
+    const directionZ =
+        -Math.cos(
+            player.yaw
+        );
+
+
+    return {
+
+        x:
+            player.x +
+            directionX *
+            amount,
+
+        z:
+            player.z +
+            directionZ *
+            amount
+
+    };
+
+}
+
+
+/* =========================================================
+   RANDOM PATROL
+========================================================= */
+
+function chooseRandomPatrol(
+    ghost
+) {
+
+    for (
+        let i = 0;
+        i < 20;
+        i++
+    ) {
+
+        const gx =
+            Math.floor(
+
+                Math.random() *
+                mazeWidth
+
+            );
+
+
+        const gz =
+            Math.floor(
+
+                Math.random() *
+                mazeHeight
+
+            );
+
+
+        if (
+            maze[gz][gx] !== "#"
+        ) {
+
+            const target =
+                gridToWorld(
+                    gx,
+                    gz
+                );
+
+
+            setGhostPath(
+
+                ghost,
+
+                target.x,
+                target.z
+
+            );
+
+
+            return;
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   SMART GHOST AI
+========================================================= */
+
+const MEMORY_TIME =
+    4;
+
+
+function updateGhosts(
+    dt
+) {
+
+    let detected =
+        false;
+
+
+    for (
+        const ghost of ghosts
+    ) {
+
+        const seesPlayer =
+            canGhostSeePlayer(
+                ghost
+            );
+
+
+        /*
+            =================================================
+            PLAYER SPOTTED
+            =================================================
+        */
+
+        if (
+            seesPlayer
+        ) {
+
+            detected =
+                true;
+
+
+            ghost.state =
+                "CHASE";
+
+
+            ghost.lastSeenX =
+                player.x;
+
+
+            ghost.lastSeenZ =
+                player.z;
+
+
+            ghost.memoryTimer =
+                MEMORY_TIME;
+
+        }
+
+
+        /*
+            =================================================
+            HUNTER
+            =================================================
+        */
+
+        if (
+            ghost.type ===
+            "HUNTER"
+        ) {
+
+            if (
+                ghost.state ===
+                "CHASE"
+            ) {
+
+                /*
+                    빨강은 플레이어의
+                    현재 위치를 적극적으로 추적
+                */
+
+                if (
+                    seesPlayer
+                ) {
+
+                    setGhostPath(
+
+                        ghost,
+
+                        player.x,
+                        player.z
+
+                    );
+
+                }
+
+
+                if (
+
+                    !ghost.path ||
+                    ghost.pathIndex >=
+                    ghost.path.length
+
+                ) {
+
+                    setGhostPath(
+
+                        ghost,
+
+                        ghost.lastSeenX,
+                        ghost.lastSeenZ
+
+                    );
+
+                }
+
+
+                followPath(
+                    ghost,
+                    dt
+                );
+
+
+                if (
+                    !seesPlayer
+                ) {
+
+                    ghost.memoryTimer -=
+                        dt;
+
+                    if (
+                        ghost.memoryTimer <= 0
+                    ) {
+
+                        ghost.state =
+                            "SEARCH";
+
+                        ghost.searchTimer =
+                            2.5;
+
+                    }
+
+                }
+
+            }
+
+            else if (
+                ghost.state ===
+                "SEARCH"
+            ) {
+
+                searchGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+            else {
+
+                patrolGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+        }
+
+
+        /*
+            =================================================
+            AMBUSH
+            =================================================
+        */
+
+        else if (
+            ghost.type ===
+            "AMBUSH"
+        ) {
+
+            if (
+                ghost.state ===
+                "CHASE"
+            ) {
+
+                let target;
+
+
+                if (
+                    seesPlayer
+                ) {
+
+                    /*
+                        플레이어 앞쪽을 노림
+                    */
+
+                    target =
+                        getPlayerPrediction(
+                            4
+                        );
+
+                }
+
+                else {
+
+                    target = {
+
+                        x:
+                            ghost.lastSeenX,
+
+                        z:
+                            ghost.lastSeenZ
+
+                    };
+
+                }
+
+
+                setGhostPath(
+
+                    ghost,
+
+                    target.x,
+                    target.z
+
+                );
+
+
+                followPath(
+                    ghost,
+                    dt
+                );
+
+
+                if (
+                    !seesPlayer
+                ) {
+
+                    ghost.memoryTimer -=
+                        dt;
+
+                    if (
+                        ghost.memoryTimer <= 0
+                    ) {
+
+                        ghost.state =
+                            "SEARCH";
+
+                        ghost.searchTimer =
+                            3;
+
+                    }
+
+                }
+
+            }
+
+            else if (
+                ghost.state ===
+                "SEARCH"
+            ) {
+
+                searchGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+            else {
+
+                patrolGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+        }
+
+
+        /*
+            =================================================
+            CUTTER
+            =================================================
+        */
+
+        else if (
+            ghost.type ===
+            "CUTTER"
+        ) {
+
+            if (
+                ghost.state ===
+                "CHASE"
+            ) {
+
+                let target;
+
+
+                if (
+                    seesPlayer
+                ) {
+
+                    /*
+                        플레이어가 가는 방향의
+                        약간 옆을 노림.
+                    */
+
+                    const prediction =
+                        getPlayerPrediction(
+                            6
+                        );
+
+
+                    target = {
+
+                        x:
+                            prediction.x,
+
+                        z:
+                            prediction.z
+
+                    };
+
+                }
+
+                else {
+
+                    target = {
+
+                        x:
+                            ghost.lastSeenX,
+
+                        z:
+                            ghost.lastSeenZ
+
+                    };
+
+                }
+
+
+                setGhostPath(
+
+                    ghost,
+
+                    target.x,
+                    target.z
+
+                );
+
+
+                followPath(
+                    ghost,
+                    dt
+                );
+
+
+                if (
+                    !seesPlayer
+                ) {
+
+                    ghost.memoryTimer -=
+                        dt;
+
+                    if (
+                        ghost.memoryTimer <= 0
+                    ) {
+
+                        ghost.state =
+                            "SEARCH";
+
+                        ghost.searchTimer =
+                            3;
+
+                    }
+
+                }
+
+            }
+
+            else if (
+                ghost.state ===
+                "SEARCH"
+            ) {
+
+                searchGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+            else {
+
+                patrolGhost(
+                    ghost,
+                    dt
+                );
+
+            }
+
+        }
+
+
+        /*
+            =================================================
+            COLLISION
+            =================================================
+        */
+
+        const dx =
+            player.x -
+            ghost.x;
+
+
+        const dz =
+            player.z -
+            ghost.z;
+
+
+        const distance =
+            Math.sqrt(
+
+                dx * dx +
+                dz * dz
+
+            );
+
+
+        if (
+            distance <
+            .9
+        ) {
+
+            gameOver();
+
+        }
+
+    }
+
+
+    updateDanger(
+        detected
+    );
+
+}
+
+
+/* =========================================================
+   FOLLOW PATH
+========================================================= */
+
+function followPath(
+    ghost,
+    dt
+) {
+
+    if (
+        !ghost.path ||
+        ghost.path.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        ghost.pathIndex >=
+        ghost.path.length
+    ) {
+
+        return;
+
+    }
+
+
+    const node =
+        ghost.path[
+            ghost.pathIndex
+        ];
+
+
+    const target =
+        gridToWorld(
+
+            node.x,
+            node.z
+
+        );
+
+
+    const reached =
+        moveGhost(
+
+            ghost,
+
+            target.x,
+            target.z,
+
+            dt
+
+        );
+
+
+    if (
+        reached
+    ) {
+
+        ghost.pathIndex++;
+
+    }
+
+}
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+function searchGhost(
+    ghost,
+    dt
+) {
+
+    ghost.searchTimer -=
+        dt;
+
+
+    if (
+        canGhostSeePlayer(
+            ghost
+        )
+    ) {
+
+        ghost.state =
+            "CHASE";
+
+
+        ghost.memoryTimer =
+            MEMORY_TIME;
+
+
+        return;
+
+    }
+
+
+    if (
+        ghost.searchTimer <=
+        0
+    ) {
+
+        ghost.state =
+            "PATROL";
+
+
+        ghost.path =
+            [];
+
+
+        ghost.pathIndex =
+            0;
+
+
+        ghost.patrolTimer =
+            0;
+
+
+        return;
+
+    }
+
+
+    if (
+
+        !ghost.path ||
+        ghost.pathIndex >=
+        ghost.path.length
+
+    ) {
+
+        chooseRandomPatrol(
+            ghost
+        );
+
+    }
+
+
+    followPath(
+        ghost,
+        dt
+    );
+
+}
+
+
+/* =========================================================
+   PATROL
+========================================================= */
+
+function patrolGhost(
+    ghost,
+    dt
+) {
+
+    ghost.patrolTimer -=
+        dt;
+
+
+    if (
+
+        !ghost.path ||
+        ghost.pathIndex >=
+        ghost.path.length ||
+        ghost.patrolTimer <= 0
+
+    ) {
+
+        chooseRandomPatrol(
+            ghost
+        );
+
+
+        ghost.patrolTimer =
+            3 +
+            Math.random() * 3;
+
+    }
+
+
+    followPath(
+        ghost,
+        dt
+    );
+
+}
+
+
+/* =========================================================
+   DANGER UI
+========================================================= */
+
+function updateDanger(
+    detected
+) {
+
+    const danger =
+        document.getElementById(
+            "danger"
+        );
+
+
+    const status =
+        document.getElementById(
+            "statusText"
+        );
+
+
+    if (
+        detected
+    ) {
+
+        danger.style.opacity =
+            1;
+
+
+        status.innerText =
+            "DETECTED";
+
+
+        status.style.color =
+            "#ff3333";
+
+    }
+
+    else {
+
+        danger.style.opacity =
+            0;
+
+
+        status.innerText =
+            "SEARCHING";
+
+
+        status.style.color =
+            "#aaa";
+
+    }
+
+}
+
+
+/* =========================================================
+   EXIT CHECK
+========================================================= */
+
+function checkExit() {
+
+    const dx =
+        player.x -
+        exitPosition.x;
+
+
+    const dz =
+        player.z -
+        exitPosition.z;
+
+
+    const distance =
+        Math.sqrt(
+
+            dx * dx +
+            dz * dz
+
+        );
+
+
+    if (
+        distance <
+        1.3
+    ) {
+
+        winGame();
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let gameStarted =
+    false;
+
+
+let startTime =
+    0;
+
+
+function startGame() {
+
+    gameStarted =
+        true;
+
+
+    player.alive =
+        true;
+
+
+    startTime =
+        performance.now();
+
+
+    document
+        .getElementById(
+            "startScreen"
+        )
+        .style.display =
+        "none";
+
+
+    renderer
+        .domElement
+        .requestPointerLock();
+
+}
+
+
+function gameOver() {
+
+    if (
+        !player.alive
+    ) {
+
+        return;
+
+    }
+
+
+    player.alive =
+        false;
+
+
+    document.exitPointerLock();
+
+
+    document
+        .getElementById(
+            "gameOver"
+        )
+        .style.display =
+        "flex";
+
+}
+
+
+function winGame() {
+
+    if (
+        !player.alive
+    ) {
+
+        return;
+
+    }
+
+
+    player.alive =
+        false;
+
+
+    const elapsed =
+        Math.floor(
+
+            (
+                performance.now() -
+                startTime
+            ) / 1000
+
+        );
+
+
+    document
+        .getElementById(
+            "finalTime"
+        )
+        .innerText =
+        elapsed;
+
+
+    document.exitPointerLock();
+
+
+    document
+        .getElementById(
+            "winScreen"
+        )
+        .style.display =
+        "flex";
+
+}
+
+
+window.restartGame =
+    function() {
+
+        location.reload();
+
+    };
+
+
+/* =========================================================
+   START BUTTON
+========================================================= */
+
+document
+    .getElementById(
+        "startButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        startGame
+
+    );
+
+
+renderer
+    .domElement
+    .addEventListener(
+
+        "click",
+
+        () => {
+
+            if (
+
+                gameStarted &&
+                player.alive
+
+            ) {
+
+                renderer
+                    .domElement
+                    .requestPointerLock();
+
+            }
+
+        }
+
+    );
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function updateTimer() {
+
+    if (
+
+        !gameStarted ||
+        !player.alive
+
+    ) {
+
+        return;
+
+    }
+
+
+    const elapsed =
+        Math.floor(
+
+            (
+                performance.now() -
+                startTime
+            ) / 1000
+
+        );
+
+
+    document
+        .getElementById(
+            "time"
+        )
+        .innerText =
+        elapsed;
+
+}
+
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+const clock =
+    new THREE.Clock();
+
+
+function animate() {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    const dt =
+        Math.min(
+
+            clock.getDelta(),
+
+            .05
+
+        );
+
+
+    if (
+
+        gameStarted &&
+        player.alive
+
+    ) {
+
+        updatePlayer(
+            dt
+        );
+
+
+        updateGhosts(
+            dt
+        );
+
+
+        checkExit();
+
+
+        updateTimer();
+
+    }
+
+
+    /*
+        유령 둥둥
+    */
+
+    const time =
+        performance.now() *
+        .004;
+
+
+    ghosts.forEach(
+
+        (ghost, index) => {
+
+            ghost.mesh.position.y =
+
+                -.6 +
+
+                Math.sin(
+
+                    time +
+                    index
+
+                ) * .12;
+
+        }
+
+    );
+
+
+    /*
+        EXIT 깜빡임
+    */
+
+    exit.material
+        .emissiveIntensity =
+
+        2.5 +
+
+        Math.sin(
+            time * 2
+        );
+
+
+    renderer.render(
+
+        scene,
+
+        camera
+
+    );
+
+}
+
+
+animate();
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+window.addEventListener(
+
+    "resize",
+
+    () => {
+
+        camera.aspect =
+
+            window.innerWidth /
+            window.innerHeight;
+
+
+        camera.updateProjectionMatrix();
+
+
+        renderer.setSize(
+
+            window.innerWidth,
+            window.innerHeight
+
+        );
+
+    }
+
+);
+
+</script>
+
+</body>
+</html>
